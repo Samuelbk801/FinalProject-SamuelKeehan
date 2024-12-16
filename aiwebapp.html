@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Block</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; background-color: #70c5ce; }
+        #score { position: absolute; top: 10px; left: 10px; font-size: 24px; color: white; }
+        #highScore { position: absolute; top: 10px; right: 10px; font-size: 24px; color: white; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const bird = {
+            x: 50,
+            y: canvas.height / 2,
+            width: 20,
+            height: 20,
+            gravity: 1.0,
+            lift: -14,
+            velocity: 0,
+            draw() {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            },
+            update() {
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+                if (this.y + this.height > canvas.height) {
+                    this.y = canvas.height - this.height;
+                    this.velocity = 0;
+                }
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.velocity = 0;
+                }
+            },
+            jump() {
+                this.velocity = this.lift;
+            }
+        };
+
+        const pipes = [];
+        const pipeWidth = 50;
+        const pipeGap = 350;
+        let frameCount = 0;
+        let pipeFrequency = 75;
+        let score = 0;
+        let highScore = 0;
+
+        function drawPipes() {
+            pipes.forEach(pipe => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+                ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+                pipe.x -= 4;
+
+                if (pipe.x + pipeWidth === bird.x) {
+                    score++;
+                    document.getElementById('score').textContent = 'Score: ' + score;
+                }
+            });
+
+            if (frameCount % pipeFrequency === 0) {
+                const top = Math.random() * (canvas.height - pipeGap);
+                const bottom = canvas.height - top - pipeGap;
+                pipes.push({ x: canvas.width, top, bottom });
+            }
+
+            pipes.forEach((pipe, index) => {
+                if (pipe.x + pipeWidth < 0) {
+                    pipes.splice(index, 1);
+                }
+            });
+        }
+
+        function detectCollision() {
+            pipes.forEach(pipe => {
+                if (bird.x < pipe.x + pipeWidth &&
+                    bird.x + bird.width > pipe.x &&
+                    (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)) {
+                    resetGame();
+                }
+            });
+        }
+
+        function resetGame() {
+            if (score > highScore) {
+                highScore = score;
+                document.getElementById('highScore').textContent = 'High Score: ' + highScore;
+            }
+            bird.y = canvas.height / 2;
+            bird.velocity = 0;
+            pipes.length = 0;
+            frameCount = 0;
+            pipeFrequency = 45;
+            score = 0;
+            document.getElementById('score').textContent = 'Score: ' + score;
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bird.draw();
+            bird.update();
+            drawPipes();
+            detectCollision();
+            frameCount++;
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                bird.jump();
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
